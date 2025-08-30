@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Izumi GPTnano Web</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .chat-container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .user {
+      background: #007bff;
+      color: white;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #eaeaea;
+      align-self: flex-start;
+    }
+    .input-box {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    .input-box input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+    }
+    .input-box button {
+      padding: 10px 15px;
+      border: none;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    .input-box button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="messages" id="messages"></div>
+    <div class="input-box">
+      <input type="text" id="userInput" placeholder="Tanyakan sesuatu...">
+      <button onclick="sendMessage()">Kirim</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://yourdomain.com/ai/gptnano?prompt="; 
+    // ganti dengan `${apikey.izumi}/ai/gptnano?prompt=`
+
+    const messagesContainer = document.getElementById("messages");
+    const userInput = document.getElementById("userInput");
+
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.innerText = text;
+      messagesContainer.appendChild(msg);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      addMessage(text, "user");
+      userInput.value = "";
+
+      try {
+        const res = await fetch(API_URL + encodeURIComponent(text));
+        const data = await res.json();
+        addMessage(data.result || "⚠️ Tidak ada respon", "bot");
+      } catch (err) {
+        addMessage("❌ Maaf error, coba lagi.", "bot");
+      }
+    }
+  </script>
+</body>
+</html>
