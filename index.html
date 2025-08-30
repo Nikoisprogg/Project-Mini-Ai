@@ -1,109 +1,76 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Izumi GPTnano Web</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Groq AI Chat</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .chat-container {
-      width: 100%;
-      max-width: 500px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .messages {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-    }
-    .message {
-      margin-bottom: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      max-width: 80%;
-    }
-    .user {
-      background: #007bff;
-      color: white;
-      align-self: flex-end;
-    }
-    .bot {
-      background: #eaeaea;
-      align-self: flex-start;
-    }
-    .input-box {
-      display: flex;
-      border-top: 1px solid #ddd;
-    }
-    .input-box input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      outline: none;
-    }
-    .input-box button {
-      padding: 10px 15px;
-      border: none;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    .input-box button:hover {
-      background: #0056b3;
-    }
+    body { font-family: sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    #chat { max-width: 600px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1rem; }
+    .msg { margin: .5rem 0; padding: .6rem .9rem; border-radius: 8px; line-height: 1.4; }
+    .user { background: #d1e7ff; text-align: right; }
+    .bot { background: #eee; text-align: left; white-space: pre-wrap; }
+    #input-box { display: flex; margin-top: 1rem; }
+    #prompt { flex: 1; padding: .6rem; border: 1px solid #ccc; border-radius: 8px; }
+    button { margin-left: .5rem; padding: .6rem 1rem; border: none; border-radius: 8px; background: #0070f3; color: #fff; cursor: pointer; }
+    button:hover { background: #0059c1; }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="messages" id="messages"></div>
-    <div class="input-box">
-      <input type="text" id="userInput" placeholder="Tanyakan sesuatu...">
+  <div id="chat">
+    <div id="messages"></div>
+    <div id="input-box">
+      <input id="prompt" type="text" placeholder="Tulis pesan..." />
       <button onclick="sendMessage()">Kirim</button>
     </div>
   </div>
 
   <script>
-    const API_URL = "https://yourdomain.com/ai/gptnano?prompt="; 
-    // ganti dengan `${apikey.izumi}/ai/gptnano?prompt=`
-
-    const messagesContainer = document.getElementById("messages");
-    const userInput = document.getElementById("userInput");
-
-    function addMessage(text, sender) {
-      const msg = document.createElement("div");
-      msg.classList.add("message", sender);
-      msg.innerText = text;
-      messagesContainer.appendChild(msg);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
     async function sendMessage() {
-      const text = userInput.value.trim();
+      const input = document.getElementById('prompt');
+      const text = input.value.trim();
       if (!text) return;
 
-      addMessage(text, "user");
-      userInput.value = "";
+      addMessage(text, 'user');
+      input.value = '';
 
-      try {
-        const res = await fetch(API_URL + encodeURIComponent(text));
-        const data = await res.json();
-        addMessage(data.result || "⚠️ Tidak ada respon", "bot");
-      } catch (err) {
-        addMessage("❌ Maaf error, coba lagi.", "bot");
+      const botDiv = addMessage('...', 'bot');
+
+      // Streaming fetch ke serverless function Groq
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text })
+      });
+
+      if (!resp.ok) {
+        botDiv.textContent = "❌ Error koneksi ke API Groq.";
+        return;
       }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      botDiv.textContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        chunk.split("\n").forEach(line => {
+          if (line.startsWith("data:")) {
+            botDiv.textContent += line.replace("data: ", "");
+          }
+        });
+      }
+    }
+
+    function addMessage(text, type) {
+      const div = document.createElement('div');
+      div.className = `msg ${type}`;
+      div.textContent = text;
+      document.getElementById('messages').appendChild(div);
+      div.scrollIntoView();
+      return div;
     }
   </script>
 </body>
